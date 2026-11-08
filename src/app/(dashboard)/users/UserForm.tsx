@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { useDialog } from "@/components/DialogProvider";
 
 type UserRow = {
   id: string;
@@ -23,6 +24,7 @@ export function UserForm({
   trigger?: "button" | "icon";
 }) {
   const router = useRouter();
+  const dialog = useDialog();
   const isEdit = !!user;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -90,7 +92,7 @@ export function UserForm({
       router.refresh();
     } else {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || "Erreur lors de l'enregistrement");
+      await dialog.error(data.error || "Erreur lors de l'enregistrement");
     }
   }
 
@@ -216,12 +218,14 @@ export function UserDeleteButton({
   username: string;
 }) {
   const router = useRouter();
+  const dialog = useDialog();
   const [loading, setLoading] = useState(false);
 
   async function handleDelete() {
-    if (!confirm(`Supprimer l'utilisateur « ${username} » ? Cette action est irréversible.`)) {
-      return;
-    }
+    const ok = await dialog.confirm(
+      `Supprimer l'utilisateur « ${username} » ? Cette action est irréversible.`
+    );
+    if (!ok) return;
     setLoading(true);
     const res = await fetch(`/api/users?id=${userId}`, { method: "DELETE" });
     setLoading(false);
@@ -229,7 +233,7 @@ export function UserDeleteButton({
       router.refresh();
     } else {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || "Erreur lors de la suppression");
+      await dialog.error(data.error || "Erreur lors de la suppression");
     }
   }
 

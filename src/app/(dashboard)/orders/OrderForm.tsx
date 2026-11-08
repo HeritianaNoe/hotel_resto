@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Minus } from "lucide-react";
+import { useDialog } from "@/components/DialogProvider";
 
 type Table = { id: string; number: number; seats: number };
 type MenuItem = { id: string; name: string; price: number; category: string | null };
@@ -15,6 +16,7 @@ export function OrderForm({
   menuItems: MenuItem[];
 }) {
   const router = useRouter();
+  const dialog = useDialog();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [tableId, setTableId] = useState(tables[0]?.id || "");
@@ -38,7 +40,7 @@ export function OrderForm({
       .map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
 
     if (items.length === 0) {
-      alert("Misafidiana sakafo farafahakeliny 1");
+      await dialog.alert("Sélectionnez au moins un plat");
       return;
     }
 
@@ -55,7 +57,7 @@ export function OrderForm({
       router.refresh();
     } else {
       const err = await res.json();
-      alert(err.error || "Erreur");
+      await dialog.error(err.error || "Erreur");
     }
   }
 
@@ -63,7 +65,7 @@ export function OrderForm({
     <>
       <button onClick={() => setOpen(true)} className="btn-primary">
         <Plus className="h-4 w-4" />
-        Commande vaovao
+        Nouvelle commande
       </button>
 
       {open && (
@@ -88,7 +90,7 @@ export function OrderForm({
               </div>
 
               <div>
-                <label className="label">Sakafo</label>
+                <label className="label">Plats</label>
                 <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-slate-200 p-2">
                   {menuItems.map((m) => (
                     <div

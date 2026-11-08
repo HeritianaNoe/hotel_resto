@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   providers: [
     Credentials({
       name: "Credentials",
@@ -50,11 +51,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.username = (user as any).username;
         token.roles = (user as any).roles;
+        token.name = user.name;
+        token.email = user.email;
+      }
+      // Allow client-side session.update() to refresh name/email after profile edit
+      if (trigger === "update" && session?.user) {
+        if (session.user.name !== undefined) token.name = session.user.name;
+        if (session.user.email !== undefined) token.email = session.user.email;
       }
       return token;
     },
@@ -63,6 +71,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         (session.user as any).id = token.id as string;
         (session.user as any).username = token.username as string;
         (session.user as any).roles = (token.roles as string[]) || [];
+        session.user.name = (token.name as string) || session.user.name;
+        session.user.email = (token.email as string) || session.user.email;
       }
       return session;
     },
@@ -90,7 +100,6 @@ export function isStaff(userRoles: string[] | undefined) {
     "RECEPTIONIST",
     "WAITER",
     "CHEF",
-    "CASHIER",
-    "STOCK_KEEPER"
+    "CASHIER"
   );
 }

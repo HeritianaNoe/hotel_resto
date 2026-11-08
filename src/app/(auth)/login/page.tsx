@@ -66,12 +66,12 @@ function LoginForm() {
             </h1>
             <p className="mt-4 max-w-md text-base leading-relaxed text-teal-100">
               Une plateforme unique pour gérer les chambres, réservations,
-              commandes, stock et facturation — conçue pour toute votre équipe.
+              commandes et facturation — conçue pour toute votre équipe.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {["ADMIN", "MANAGER", "RÉCEPTION", "SERVEUR", "CHEF", "CAISSE", "STOCK", "CLIENT"].map(
+            {["ADMIN", "MANAGER", "RÉCEPTION", "SERVEUR", "CHEF", "CAISSE", "CLIENT"].map(
               (r) => (
                 <span
                   key={r}

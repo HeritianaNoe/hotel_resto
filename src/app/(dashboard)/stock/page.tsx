@@ -1,15 +1,36 @@
 import { auth, hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { StockForm, StockDeleteButton } from "./StockForm";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export default async function StockPage() {
+const PAGE_SIZE = 10;
+
+export default async function StockPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const session = await auth();
   if (!session || !hasRole(session.user.roles, "ADMIN", "MANAGER", "STOCK_KEEPER", "CHEF")) {
     redirect("/dashboard");
   }
 
-  const items = await prisma.stockItem.findMany({ orderBy: { name: "asc" } });
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(params.page || "1", 10) || 1);
+  const skip = (page - 1) * PAGE_SIZE;
+
+  const [items, total] = await Promise.all([
+    prisma.stockItem.findMany({
+      orderBy: { name: "asc" },
+      skip,
+      take: PAGE_SIZE,
+    }),
+    prisma.stockItem.count(),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const canEdit = hasRole(session.user.roles, "ADMIN", "MANAGER", "STOCK_KEEPER");
 
   return (
@@ -17,7 +38,9 @@ export default async function StockPage() {
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="page-title">Stock</h1>
-          <p className="page-subtitle">Gestion du stock cuisine &amp; bar</p>
+          <p className="page-subtitle">
+            Gestion du stock cuisine &amp; bar · {total} article{total !== 1 ? "s" : ""}
+          </p>
         </div>
         {canEdit && <StockForm />}
       </div>
@@ -152,6 +175,45 @@ export default async function StockPage() {
           <p className="p-12 text-center text-slate-400">Aucun article en stock</p>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <p className="text-sm text-slate-500">
+            Page {page} / {totalPages}
+          </p>
+          <div className="flex items-center gap-1">
+            {page > 1 ? (
+              <Link
+                href={`/stock?page=${page - 1}`}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Précédent
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-lg border border-slate-100 px-3 py-1.5 text-sm text-slate-300">
+                <ChevronLeft className="h-4 w-4" />
+                Précédent
+              </span>
+            )}
+            {page < totalPages ? (
+              <Link
+                href={`/stock?page=${page + 1}`}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Suivant
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-lg border border-slate-100 px-3 py-1.5 text-sm text-slate-300">
+                Suivant
+                <ChevronRight className="h-4 w-4" />
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

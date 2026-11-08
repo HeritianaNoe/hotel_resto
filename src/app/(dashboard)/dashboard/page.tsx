@@ -4,25 +4,37 @@ import {
   BedDouble,
   CalendarCheck,
   ClipboardList,
-  Package,
-  AlertTriangle,
   Users,
   TrendingUp,
   ArrowUpRight,
 } from "lucide-react";
 import Link from "next/link";
+import {
+  DashboardCharts,
+  MONTHS_FR,
+  CATEGORY_COLORS,
+  type MonthlyRevenue,
+  type CategorySales,
+} from "@/components/DashboardCharts";
 
 export default async function DashboardPage() {
   const session = await auth();
   const roles = session?.user?.roles || [];
+
+  const year = new Date().getFullYear();
+  const yearStart = new Date(year, 0, 1);
+  const yearEnd = new Date(year, 11, 31, 23, 59, 59);
 
   const [
     roomsCount,
     availableRooms,
     reservationsCount,
     activeOrders,
-    lowStock,
     usersCount,
+    invoices,
+    foodOrders,
+    guests,
+    orderItemsWithMenu,
   ] = await Promise.all([
     prisma.room.count(),
     prisma.room.count({ where: { status: "AVAILABLE" } }),
@@ -32,15 +44,88 @@ export default async function DashboardPage() {
     prisma.foodOrder.count({
       where: { status: { in: ["PENDING", "PREPARING", "READY"] } },
     }),
-    prisma.stockItem.findMany({
-      where: { minLevel: { not: null } },
-    }),
     prisma.user.count(),
+    // Invoices for revenue by month
+    prisma.invoice.findMany({
+      where: {
+        paidAt: { gte: yearStart, lte: yearEnd },
+      },
+      select: { amount: true, paidAt: true },
+    }),
+    // Orders for volume by month
+    prisma.foodOrder.findMany({
+      where: {
+        createdAt: { gte: yearStart, lte: yearEnd },
+      },
+      select: { createdAt: true },
+    }),
+    // New guests (GUEST role) created this year
+    prisma.user.findMany({
+      where: {
+        createdAt: { gte: yearStart, lte: yearEnd },
+        roles: { some: { role: { name: "GUEST" } } },
+      },
+      select: { createdAt: true },
+    }),
+    // Order items + menu category for pie chart
+    prisma.orderItem.findMany({
+      where: {
+        foodOrder: {
+          createdAt: { gte: yearStart, lte: yearEnd },
+        },
+      },
+      select: {
+        quantity: true,
+        unitPrice: true,
+        menuItem: { select: { category: true, name: true } },
+      },
+    }),
   ]);
 
-  const lowStockItems = lowStock.filter(
-    (s) => s.minLevel !== null && Number(s.quantity) <= Number(s.minLevel)
-  );
+  // Build monthly series (Jan–Dec)
+  const monthlyMap: Record<
+    number,
+    { revenue: number; orders: number; newGuests: number }
+  > = {};
+  for (let m = 0; m < 12; m++) {
+    monthlyMap[m] = { revenue: 0, orders: 0, newGuests: 0 };
+  }
+
+  for (const inv of invoices) {
+    const m = inv.paidAt.getMonth();
+    monthlyMap[m].revenue += Number(inv.amount);
+  }
+  for (const o of foodOrders) {
+    const m = o.createdAt.getMonth();
+    monthlyMap[m].orders += 1;
+  }
+  for (const g of guests) {
+    const m = g.createdAt.getMonth();
+    monthlyMap[m].newGuests += 1;
+  }
+
+  const monthly: MonthlyRevenue[] = Array.from({ length: 12 }, (_, i) => ({
+    month: MONTHS_FR[i],
+    monthKey: `${year}-${String(i + 1).padStart(2, "0")}`,
+    revenue: Math.round(monthlyMap[i].revenue),
+    orders: monthlyMap[i].orders,
+    newGuests: monthlyMap[i].newGuests,
+  }));
+
+  // Category aggregation
+  const catMap: Record<string, number> = {};
+  for (const item of orderItemsWithMenu) {
+    const cat = item.menuItem.category || "Autre";
+    const amount = Number(item.unitPrice) * item.quantity;
+    catMap[cat] = (catMap[cat] || 0) + amount;
+  }
+  const categories: CategorySales[] = Object.entries(catMap)
+    .map(([name, value], i) => ({
+      name,
+      value: Math.round(value),
+      color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+    }))
+    .sort((a, b) => b.value - a.value);
 
   type StatCard = {
     title: string;
@@ -87,24 +172,6 @@ export default async function DashboardPage() {
     });
   }
 
-  if (hasRole(roles, "ADMIN", "MANAGER", "STOCK_KEEPER", "CHEF")) {
-    cards.push({
-      title: "Stock bas",
-      value: lowStockItems.length,
-      subtitle: "à réapprovisionner",
-      icon: Package,
-      href: "/stock",
-      gradient:
-        lowStockItems.length > 0
-          ? "from-red-500 to-rose-600"
-          : "from-emerald-500 to-teal-600",
-      iconBg:
-        lowStockItems.length > 0
-          ? "bg-red-50 text-red-600"
-          : "bg-emerald-50 text-emerald-600",
-    });
-  }
-
   if (hasRole(roles, "ADMIN", "MANAGER")) {
     cards.push({
       title: "Utilisateurs",
@@ -120,6 +187,8 @@ export default async function DashboardPage() {
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+
+  const showCharts = hasRole(roles, "ADMIN", "MANAGER", "CASHIER");
 
   return (
     <div>
@@ -143,69 +212,37 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats grid */}
+      {/* Stats grid — 4 KPI on one row */}
       {cards.length > 0 && (
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {cards.map((c) => (
-            <Link key={c.title} href={c.href} className="stat-card group">
-              <div className="flex items-start justify-between">
+            <Link key={c.title} href={c.href} className="stat-card group !p-3.5">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${c.iconBg}`}
+                >
+                  <c.icon className="h-4 w-4" />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-slate-500">{c.title}</p>
-                  <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  <p className="truncate text-xs font-medium text-slate-500">{c.title}</p>
+                  <p className="text-xl font-bold tracking-tight text-slate-900">
                     {c.value}
                   </p>
-                  <p className="mt-1 text-xs text-slate-400">{c.subtitle}</p>
+                  <p className="truncate text-[11px] text-slate-400">{c.subtitle}</p>
                 </div>
-                <div
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${c.iconBg}`}
-                >
-                  <c.icon className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-1 text-xs font-medium text-teal-600 opacity-0 transition group-hover:opacity-100">
-                Voir le détail
-                <ArrowUpRight className="h-3.5 w-3.5" />
+                <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-teal-500 opacity-0 transition group-hover:opacity-100" />
               </div>
             </Link>
           ))}
         </div>
       )}
 
-      {/* Low stock alert */}
-      {lowStockItems.length > 0 &&
-        hasRole(roles, "ADMIN", "MANAGER", "STOCK_KEEPER", "CHEF") && (
-          <div className="card mb-6 border-amber-200/80 bg-gradient-to-r from-amber-50 to-orange-50">
-            <div className="mb-3 flex items-center gap-2.5 text-amber-800">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100">
-                <AlertTriangle className="h-4 w-4" />
-              </div>
-              <h2 className="font-semibold">Alertes stock bas</h2>
-            </div>
-            <ul className="space-y-2">
-              {lowStockItems.map((s) => (
-                <li
-                  key={s.id.toString()}
-                  className="flex items-center justify-between rounded-lg bg-white/60 px-3 py-2 text-sm text-amber-900"
-                >
-                  <span className="font-medium">{s.name}</span>
-                  <span className="text-amber-700">
-                    {Number(s.quantity)} {s.unit || ""}{" "}
-                    <span className="text-amber-500">
-                      (min. {Number(s.minLevel)})
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/stock"
-              className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-amber-800 hover:text-amber-900"
-            >
-              Gérer le stock
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        )}
+      {/* Commercial charts - ADMIN / MANAGER / CASHIER */}
+      {showCharts && (
+        <div className="mb-8">
+          <DashboardCharts monthly={monthly} categories={categories} />
+        </div>
+      )}
 
       {/* Guest area */}
       {hasRole(roles, "GUEST") && (

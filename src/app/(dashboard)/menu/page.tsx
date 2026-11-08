@@ -3,10 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/utils";
 import { redirect } from "next/navigation";
 import { MenuForm } from "./MenuForm";
+import { MenuItemActions } from "./MenuItemActions";
 
 export default async function MenuPage() {
   const session = await auth();
-  if (!session || !hasRole(session.user.roles, "ADMIN", "MANAGER", "CHEF", "WAITER")) {
+  if (
+    !session ||
+    !hasRole(session.user.roles, "ADMIN", "MANAGER", "CHEF", "WAITER")
+  ) {
     redirect("/dashboard");
   }
 
@@ -27,7 +31,7 @@ export default async function MenuPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Menu</h1>
-          <p className="text-slate-500">Sakafo sy zava-pisotro</p>
+          <p className="text-slate-500">Plats et boissons</p>
         </div>
         {canEdit && <MenuForm />}
       </div>
@@ -39,29 +43,39 @@ export default async function MenuPage() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {list.map((item) => (
                 <div key={item.id.toString()} className="card flex flex-col">
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-semibold text-slate-900">{item.name}</h3>
-                    <span
-                      className={`badge ${
-                        item.available
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {item.available ? "Disponible" : "Indisponible"}
-                    </span>
-                  </div>
+                  <h3 className="font-semibold text-slate-900">{item.name}</h3>
                   {item.description && (
-                    <p className="mt-1 text-sm text-slate-500">{item.description}</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {item.description}
+                    </p>
                   )}
-                  <p className="mt-auto pt-3 text-lg font-bold text-teal-700">
-                    {formatMoney(item.price)}
-                  </p>
+                  <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+                    <p className="text-lg font-bold text-teal-700">
+                      {formatMoney(item.price)}
+                    </p>
+                    {canEdit && (
+                      <MenuItemActions
+                        item={{
+                          id: item.id.toString(),
+                          name: item.name,
+                          description: item.description,
+                          price: item.price.toString(),
+                          category: item.category,
+                          available: item.available,
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         ))}
+        {items.length === 0 && (
+          <p className="py-12 text-center text-slate-400">
+            Aucun élément de menu
+          </p>
+        )}
       </div>
     </div>
   );

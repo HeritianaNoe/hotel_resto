@@ -66,8 +66,8 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const session = await auth();
-  if (!session || !hasRole(session.user.roles, "ADMIN")) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await req.json();
@@ -75,6 +75,48 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "ID requis" }, { status: 400 });
   }
 
+  const isSelf = body.self === true && session.user.id === String(body.id);
+  const isAdmin = hasRole(session.user.roles, "ADMIN");
+
+  if (!isSelf && !isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Self-update: only fullName, email, password
+  if (isSelf && !isAdmin) {
+    const data: Record<string, unknown> = {};
+    if (body.email !== undefined) data.email = body.email;
+    if (body.fullName !== undefined) data.fullName = body.fullName || null;
+    if (body.password && body.password.trim()) {
+      data.password = await bcrypt.hash(body.password, 10);
+    }
+
+    try {
+      const user = await prisma.user.update({
+        where: { id: BigInt(body.id) },
+        data,
+        include: { roles: { include: { role: true } } },
+      });
+
+      return NextResponse.json(
+        serializeBigInt({
+          ...user,
+          password: undefined,
+          roles: user.roles.map((r) => r.role.name),
+        })
+      );
+    } catch (e: any) {
+      if (e?.code === "P2002") {
+        return NextResponse.json(
+          { error: "Cet email est déjà utilisé" },
+          { status: 400 }
+        );
+      }
+      throw e;
+    }
+  }
+
+  // Admin full update
   const data: Record<string, unknown> = {};
   if (body.email !== undefined) data.email = body.email;
   if (body.fullName !== undefined) data.fullName = body.fullName || null;
@@ -83,35 +125,44 @@ export async function PATCH(req: NextRequest) {
     data.password = await bcrypt.hash(body.password, 10);
   }
 
-  // Update basic fields
-  const user = await prisma.user.update({
-    where: { id: BigInt(body.id) },
-    data,
-  });
+  try {
+    const user = await prisma.user.update({
+      where: { id: BigInt(body.id) },
+      data,
+    });
 
-  // Update role if provided
-  if (body.role) {
-    const role = await prisma.role.findUnique({ where: { name: body.role } });
-    if (role) {
-      await prisma.userRole.deleteMany({ where: { userId: user.id } });
-      await prisma.userRole.create({
-        data: { userId: user.id, roleId: role.id },
-      });
+    // Update role if provided
+    if (body.role) {
+      const role = await prisma.role.findUnique({ where: { name: body.role } });
+      if (role) {
+        await prisma.userRole.deleteMany({ where: { userId: user.id } });
+        await prisma.userRole.create({
+          data: { userId: user.id, roleId: role.id },
+        });
+      }
     }
+
+    const updated = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: { roles: { include: { role: true } } },
+    });
+
+    return NextResponse.json(
+      serializeBigInt({
+        ...updated,
+        password: undefined,
+        roles: updated?.roles.map((r) => r.role.name) || [],
+      })
+    );
+  } catch (e: any) {
+    if (e?.code === "P2002") {
+      return NextResponse.json(
+        { error: "Cet email est déjà utilisé" },
+        { status: 400 }
+      );
+    }
+    throw e;
   }
-
-  const updated = await prisma.user.findUnique({
-    where: { id: user.id },
-    include: { roles: { include: { role: true } } },
-  });
-
-  return NextResponse.json(
-    serializeBigInt({
-      ...updated,
-      password: undefined,
-      roles: updated?.roles.map((r) => r.role.name) || [],
-    })
-  );
 }
 
 export async function DELETE(req: NextRequest) {

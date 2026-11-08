@@ -2,51 +2,93 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { useDialog } from "@/components/DialogProvider";
 
-export function RoomActions() {
+type RoomRow = {
+  id: string;
+  number: string;
+  type: string;
+  pricePerNight: number;
+  status: string;
+};
+
+export function RoomActions({ room }: { room?: RoomRow }) {
   const router = useRouter();
+  const dialog = useDialog();
+  const isEdit = !!room;
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    number: "",
-    type: "SINGLE",
-    pricePerNight: "",
-    status: "AVAILABLE",
+    number: room?.number || "",
+    type: room?.type || "SINGLE",
+    pricePerNight: room?.pricePerNight?.toString() || "",
+    status: room?.status || "AVAILABLE",
   });
+
+  function openModal() {
+    if (room) {
+      setForm({
+        number: room.number,
+        type: room.type,
+        pricePerNight: room.pricePerNight.toString(),
+        status: room.status,
+      });
+    }
+    setOpen(true);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    const payload = {
+      ...(isEdit ? { id: room!.id } : {}),
+      number: form.number,
+      type: form.type,
+      pricePerNight: Number(form.pricePerNight),
+      status: form.status,
+    };
     const res = await fetch("/api/rooms", {
-      method: "POST",
+      method: isEdit ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        pricePerNight: Number(form.pricePerNight),
-      }),
+      body: JSON.stringify(payload),
     });
     setLoading(false);
     if (res.ok) {
       setOpen(false);
-      setForm({ number: "", type: "SINGLE", pricePerNight: "", status: "AVAILABLE" });
+      if (!isEdit) {
+        setForm({ number: "", type: "SINGLE", pricePerNight: "", status: "AVAILABLE" });
+      }
       router.refresh();
     } else {
-      alert("Erreur lors de la création");
+      const data = await res.json().catch(() => ({}));
+      await dialog.error(data.error || "Erreur lors de l'enregistrement");
     }
   }
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="btn-primary">
-        <Plus className="h-4 w-4" />
-        Hanampy efitrano
-      </button>
+      {isEdit ? (
+        <button
+          onClick={openModal}
+          className="rounded-lg p-1.5 text-slate-500 transition hover:bg-teal-50 hover:text-teal-700"
+          title="Modifier"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+      ) : (
+        <button onClick={openModal} className="btn-primary">
+          <Plus className="h-4 w-4" />
+          Ajouter une chambre
+        </button>
+      )}
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h2 className="mb-4 text-lg font-semibold">Efitrano vaovao</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="mb-5 text-lg font-semibold text-slate-900">
+              {isEdit ? "Modifier la chambre" : "Nouvelle chambre"}
+            </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="label">Numéro</label>
@@ -56,6 +98,7 @@ export function RoomActions() {
                   onChange={(e) => setForm({ ...form, number: e.target.value })}
                   required
                   placeholder="101"
+                  autoFocus={!isEdit}
                 />
               </div>
               <div>
@@ -100,7 +143,7 @@ export function RoomActions() {
                   Annuler
                 </button>
                 <button type="submit" className="btn-primary" disabled={loading}>
-                  {loading ? "..." : "Créer"}
+                  {loading ? "..." : isEdit ? "Enregistrer" : "Créer"}
                 </button>
               </div>
             </form>
@@ -108,5 +151,44 @@ export function RoomActions() {
         </div>
       )}
     </>
+  );
+}
+
+export function RoomDeleteButton({
+  roomId,
+  number,
+}: {
+  roomId: string;
+  number: string;
+}) {
+  const router = useRouter();
+  const dialog = useDialog();
+  const [loading, setLoading] = useState(false);
+
+  async function handleDelete() {
+    const ok = await dialog.confirm(
+      `Supprimer la chambre « ${number} » ? Cette action est irréversible.`
+    );
+    if (!ok) return;
+    setLoading(true);
+    const res = await fetch(`/api/rooms?id=${roomId}`, { method: "DELETE" });
+    setLoading(false);
+    if (res.ok) {
+      router.refresh();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      await dialog.error(data.error || "Erreur lors de la suppression");
+    }
+  }
+
+  return (
+    <button
+      onClick={handleDelete}
+      disabled={loading}
+      className="rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+      title="Supprimer"
+    >
+      <Trash2 className="h-4 w-4" />
+    </button>
   );
 }

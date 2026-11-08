@@ -85,14 +85,16 @@ CREATE TABLE IF NOT EXISTS order_items (
   unit_price    DECIMAL(12,2) NOT NULL
 );
 
--- Invoices
+-- Invoices (supports FOOD and ROOM)
 CREATE TABLE IF NOT EXISTS invoices (
-  id            BIGSERIAL PRIMARY KEY,
-  food_order_id BIGINT        NOT NULL UNIQUE REFERENCES food_orders(id),
-  cashier_id    BIGINT        REFERENCES users(id),
-  amount        DECIMAL(12,2) NOT NULL,
-  method        VARCHAR(20)   NOT NULL,
-  paid_at       TIMESTAMPTZ   NOT NULL
+  id              BIGSERIAL PRIMARY KEY,
+  food_order_id   BIGINT        UNIQUE REFERENCES food_orders(id),
+  reservation_id  BIGINT        UNIQUE REFERENCES reservations(id),
+  cashier_id      BIGINT        REFERENCES users(id),
+  amount          DECIMAL(12,2) NOT NULL,
+  method          VARCHAR(20)   NOT NULL,
+  paid_at         TIMESTAMPTZ   NOT NULL,
+  type            VARCHAR(20)   NOT NULL DEFAULT 'FOOD'
 );
 
 -- Stock items
@@ -113,11 +115,13 @@ CREATE INDEX IF NOT EXISTS idx_food_orders_status     ON food_orders(status);
 CREATE INDEX IF NOT EXISTS idx_food_orders_table_id   ON food_orders(dining_table_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id   ON order_items(food_order_id);
 CREATE INDEX IF NOT EXISTS idx_user_roles_user_id     ON user_roles(user_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_reservation   ON invoices(reservation_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_food_order    ON invoices(food_order_id);
 
 COMMIT;
 
 -- ============================================================
--- Seed roles (data for users/password is better via Prisma seed)
+-- Seed roles
 -- ============================================================
 INSERT INTO roles (name) VALUES
   ('ADMIN'),
@@ -131,5 +135,14 @@ INSERT INTO roles (name) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- After creating the tables, run from the Next.js project:
+--   npx prisma db push
 --   npm run db:seed
 -- to insert demo users (password: password123) + sample data.
+
+-- Migration helper if you already have the old invoices table
+-- (run once if food_order_id was NOT NULL and reservation_id missing):
+/*
+ALTER TABLE invoices ALTER COLUMN food_order_id DROP NOT NULL;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS reservation_id BIGINT UNIQUE REFERENCES reservations(id);
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS type VARCHAR(20) NOT NULL DEFAULT 'FOOD';
+*/

@@ -10,7 +10,6 @@ import {
   CalendarCheck,
   UtensilsCrossed,
   ClipboardList,
-  Package,
   Users,
   Receipt,
   LogOut,
@@ -21,54 +20,88 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles: string[];
+};
+
+type NavSection = {
+  title: string;
+  items: NavItem[];
+};
+
+const navSections: NavSection[] = [
   {
-    href: "/dashboard",
-    label: "Tableau de bord",
-    icon: LayoutDashboard,
-    roles: ["ADMIN", "MANAGER", "RECEPTIONIST", "WAITER", "CHEF", "CASHIER", "STOCK_KEEPER", "GUEST"],
+    title: "Général",
+    items: [
+      {
+        href: "/dashboard",
+        label: "Tableau de bord",
+        icon: LayoutDashboard,
+        roles: [
+          "ADMIN",
+          "MANAGER",
+          "RECEPTIONIST",
+          "WAITER",
+          "CHEF",
+          "CASHIER",
+          "GUEST",
+        ],
+      },
+      {
+        href: "/invoices",
+        label: "Factures",
+        icon: Receipt,
+        roles: ["ADMIN", "MANAGER", "CASHIER", "RECEPTIONIST"],
+      },
+    ],
   },
   {
-    href: "/rooms",
-    label: "Chambres",
-    icon: BedDouble,
-    roles: ["ADMIN", "MANAGER", "RECEPTIONIST"],
+    title: "Hôtel",
+    items: [
+      {
+        href: "/rooms",
+        label: "Chambres",
+        icon: BedDouble,
+        roles: ["ADMIN", "MANAGER", "RECEPTIONIST"],
+      },
+      {
+        href: "/reservations",
+        label: "Réservations",
+        icon: CalendarCheck,
+        roles: ["ADMIN", "MANAGER", "RECEPTIONIST", "GUEST"],
+      },
+    ],
   },
   {
-    href: "/reservations",
-    label: "Réservations",
-    icon: CalendarCheck,
-    roles: ["ADMIN", "MANAGER", "RECEPTIONIST", "GUEST"],
+    title: "Restaurant",
+    items: [
+      {
+        href: "/menu",
+        label: "Menu",
+        icon: UtensilsCrossed,
+        roles: ["ADMIN", "MANAGER", "CHEF", "WAITER"],
+      },
+      {
+        href: "/orders",
+        label: "Commandes",
+        icon: ClipboardList,
+        roles: ["ADMIN", "MANAGER", "WAITER", "CHEF", "CASHIER"],
+      },
+    ],
   },
   {
-    href: "/menu",
-    label: "Menu",
-    icon: UtensilsCrossed,
-    roles: ["ADMIN", "MANAGER", "CHEF", "WAITER"],
-  },
-  {
-    href: "/orders",
-    label: "Commandes",
-    icon: ClipboardList,
-    roles: ["ADMIN", "MANAGER", "WAITER", "CHEF", "CASHIER"],
-  },
-  {
-    href: "/invoices",
-    label: "Factures",
-    icon: Receipt,
-    roles: ["ADMIN", "MANAGER", "CASHIER"],
-  },
-  {
-    href: "/stock",
-    label: "Stock",
-    icon: Package,
-    roles: ["ADMIN", "MANAGER", "STOCK_KEEPER", "CHEF"],
-  },
-  {
-    href: "/users",
-    label: "Utilisateurs",
-    icon: Users,
-    roles: ["ADMIN", "MANAGER"],
+    title: "Administration",
+    items: [
+      {
+        href: "/users",
+        label: "Utilisateurs",
+        icon: Users,
+        roles: ["ADMIN", "MANAGER"],
+      },
+    ],
   },
 ];
 
@@ -95,9 +128,14 @@ export function Sidebar() {
     };
   }, [open]);
 
-  const visible = navItems.filter((item) =>
-    item.roles.some((r) => roles.includes(r))
-  );
+  const visibleSections = navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) =>
+        item.roles.some((r) => roles.includes(r))
+      ),
+    }))
+    .filter((section) => section.items.length > 0);
 
   const NavContent = () => (
     <>
@@ -108,64 +146,73 @@ export function Sidebar() {
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-slate-900">Hotel & Resto</p>
-          <p className="truncate text-[11px] font-medium text-teal-600">Gestion intégrée</p>
+          <p className="truncate text-[11px] font-medium text-teal-600">
+            Gestion intégrée
+          </p>
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-          Menu
-        </p>
-        {visible.map((item) => {
-          const active =
-            pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                active
-                  ? "bg-teal-50 text-teal-700 shadow-sm shadow-teal-100"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              )}
-            >
-              <item.icon
-                className={cn(
-                  "h-5 w-5 shrink-0 transition-colors",
-                  active ? "text-teal-600" : "text-slate-400 group-hover:text-slate-600"
-                )}
-              />
-              <span className="flex-1 truncate">{item.label}</span>
-              {active && <ChevronRight className="h-4 w-4 text-teal-500" />}
-            </Link>
-          );
-        })}
+      {/* Navigation with sections */}
+      <nav className="flex-1 space-y-4 overflow-y-auto p-3">
+        {visibleSections.map((section) => (
+          <div key={section.title}>
+            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              {section.title}
+            </p>
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const active =
+                  pathname === item.href || pathname.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                      active
+                        ? "bg-teal-50 text-teal-700 shadow-sm shadow-teal-100"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    )}
+                  >
+                    <item.icon
+                      className={cn(
+                        "h-5 w-5 shrink-0 transition-colors",
+                        active
+                          ? "text-teal-600"
+                          : "text-slate-400 group-hover:text-slate-600"
+                      )}
+                    />
+                    <span className="flex-1 truncate">{item.label}</span>
+                    {active && <ChevronRight className="h-4 w-4 text-teal-500" />}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* User + Logout */}
+      {/* User profile link only (logout is in TopNav) */}
       <div className="border-t border-slate-200/80 p-4">
-        <div className="mb-3 flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-teal-600 text-sm font-bold text-white">
-            {(session?.user?.name || session?.user?.username || "?").charAt(0).toUpperCase()}
+        <Link
+          href="/profile"
+          className="flex items-center gap-3 rounded-xl p-2 -m-2 transition hover:bg-slate-50 group"
+          title="Modifier mon profil"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-teal-600 text-sm font-bold text-white ring-2 ring-transparent transition group-hover:ring-teal-300">
+            {(session?.user?.name || session?.user?.username || "?")
+              .charAt(0)
+              .toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-slate-900">
+            <p className="truncate text-sm font-semibold text-slate-900 group-hover:text-teal-700">
               {session?.user?.name}
             </p>
             <p className="truncate text-[11px] text-slate-500">
-              {roles.join(" · ")}
+              {roles.join(" · ")} · Mon profil
             </p>
           </div>
-        </div>
-        <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
-        >
-          <LogOut className="h-4 w-4" />
-          Se déconnecter
-        </button>
+        </Link>
       </div>
     </>
   );
@@ -181,12 +228,19 @@ export function Sidebar() {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-1 items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-teal-700">
             <Building2 className="h-3.5 w-3.5 text-white" />
           </div>
           <span className="text-sm font-bold text-slate-900">Hotel & Resto</span>
         </div>
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium text-red-600 hover:bg-red-50"
+          aria-label="Se déconnecter"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Mobile overlay */}
@@ -214,10 +268,12 @@ export function Sidebar() {
         <NavContent />
       </aside>
 
-      {/* Desktop sidebar */}
-      <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-slate-200/80 bg-white lg:flex">
+      {/* Desktop sidebar - fixed */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden h-screen w-64 flex-col border-r border-slate-200/80 bg-white lg:flex">
         <NavContent />
       </aside>
+      {/* Spacer to offset fixed sidebar */}
+      <div className="hidden w-64 shrink-0 lg:block" aria-hidden="true" />
     </>
   );
 }

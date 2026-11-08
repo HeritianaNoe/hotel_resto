@@ -12,7 +12,6 @@ async function main() {
     "WAITER",
     "CHEF",
     "CASHIER",
-    "STOCK_KEEPER",
     "GUEST",
   ];
 
@@ -34,7 +33,6 @@ async function main() {
     { username: "waiter1", email: "waiter1@hotel.local", fullName: "Randria Serveur", role: "WAITER" },
     { username: "chef1", email: "chef1@hotel.local", fullName: "Rabe Chef", role: "CHEF" },
     { username: "cashier1", email: "cashier1@hotel.local", fullName: "Hery Caissier", role: "CASHIER" },
-    { username: "stock1", email: "stock1@hotel.local", fullName: "Faly Magasinier", role: "STOCK_KEEPER" },
     { username: "guest1", email: "guest1@hotel.local", fullName: "Vahiny Iray", role: "GUEST" },
   ];
 
@@ -68,8 +66,8 @@ async function main() {
 
   // Rooms
   const rooms = [
-    { number: "101", type: "SINGLE", pricePerNight: 80000, status: "AVAILABLE" },
-    { number: "102", type: "DOUBLE", pricePerNight: 120000, status: "AVAILABLE" },
+    { number: "001", type: "SINGLE", pricePerNight: 80000, status: "AVAILABLE" },
+    { number: "101", type: "DOUBLE", pricePerNight: 120000, status: "AVAILABLE" },
     { number: "201", type: "FAMILY", pricePerNight: 180000, status: "AVAILABLE" },
     { number: "301", type: "SUITE", pricePerNight: 350000, status: "AVAILABLE" },
   ];
@@ -102,13 +100,17 @@ async function main() {
 
   // Menu items (Malagasy cuisine)
   const menu = [
-    { name: "Romazava", description: "Hena omby sy anamalaho", price: 15000, category: "Plat" },
-    { name: "Ravitoto sy henakisoa", description: "Ravitoto voatoto miaraka amin'ny henakisoa", price: 16000, category: "Plat" },
-    { name: "Henomby ritra", description: "Hena omby ritra sy vary", price: 18000, category: "Plat" },
-    { name: "Salady", description: "Salady vaovao", price: 8000, category: "Entrée" },
-    { name: "Mofo gasy", description: "Mofo gasy 5 pcs", price: 2500, category: "Snack" },
-    { name: "Ranon'ampango", description: "Rano mafana", price: 1000, category: "Boisson" },
-    { name: "THB", description: "Labiera malagasy 65cl", price: 5000, category: "Boisson" },
+    { name: "Romazava", description: "Miaraka @ vary", price: 15000, category: "Plat" },
+    { name: "Henakisoa sy Ravitoto", description: "Miaraka @ vary", price: 16000, category: "Plat" },
+    { name: "Henomby ritra", description: "Miaraka @ vary", price: 18000, category: "Plat" },
+    { name: "Lasary karaoty", description: "Vinaigrette", price: 4000, category: "Entrée" },
+    { name: "Salady", description: "Vinaigrette", price: 4000, category: "Entrée" },
+    { name: "Maskita", description: "5 pcs", price: 5000, category: "Snack" },
+    { name: "Nem", description: "5 pcs", price: 4000, category: "Snack" },
+    { name: "Sambos", description: "5 pcs", price: 4000, category: "Snack" },
+    { name: "Coca-Cola", description: "1 litre", price: 5000, category: "Boisson" },
+    { name: "THB", description: "65 cl", price: 5000, category: "Boisson" },
+    { name: "Limonade", description: "1 litre", price: 5000, category: "Boisson" },
   ];
 
   for (const m of menu) {
@@ -118,20 +120,74 @@ async function main() {
     }
   }
 
-  // Stock items
-  const stock = [
-    { name: "Vary", quantity: 120, unit: "kg", minLevel: 30, supplier: "Mpamatsy Vary" },
-    { name: "Hena omby", quantity: 25, unit: "kg", minLevel: 10, supplier: "Boucherie Centrale" },
-    { name: "THB (cageot)", quantity: 8, unit: "cageot", minLevel: 5, supplier: "Star Brasserie" },
-    { name: "Menaka", quantity: 4, unit: "L", minLevel: 5, supplier: "Mpamatsy Menaka" },
-  ];
+  // Demo commercial data for charts (current year)
+  const menuItems = await prisma.menuItem.findMany();
+  const diningTables = await prisma.diningTable.findMany();
+  const waiter = await prisma.user.findUnique({ where: { username: "waiter1" } });
+  const cashier = await prisma.user.findUnique({ where: { username: "cashier1" } });
+  const guest = await prisma.user.findUnique({ where: { username: "guest1" } });
 
-  for (const s of stock) {
-    await prisma.stockItem.upsert({
-      where: { name: s.name },
-      update: {},
-      create: s,
-    });
+  if (menuItems.length > 0 && diningTables.length > 0 && waiter && cashier) {
+    const existingOrders = await prisma.foodOrder.count();
+    if (existingOrders < 5) {
+      const year = new Date().getFullYear();
+      // Create sample orders + invoices across months
+      const sampleMonths = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // Jan–Oct
+      for (const month of sampleMonths) {
+        const ordersThisMonth = 3 + Math.floor(Math.random() * 5); // 3–7
+        for (let i = 0; i < ordersThisMonth; i++) {
+          const day = 1 + Math.floor(Math.random() * 27);
+          const createdAt = new Date(year, month, day, 12 + Math.floor(Math.random() * 8));
+          const table = diningTables[Math.floor(Math.random() * diningTables.length)];
+          const order = await prisma.foodOrder.create({
+            data: {
+              diningTableId: table.id,
+              waiterId: waiter.id,
+              guestId: guest?.id ?? null,
+              status: "SERVED",
+              createdAt,
+            },
+          });
+
+          // 1–3 items per order
+          const itemCount = 1 + Math.floor(Math.random() * 3);
+          let orderTotal = 0;
+          const used = new Set<number>();
+          for (let j = 0; j < itemCount; j++) {
+            let idx = Math.floor(Math.random() * menuItems.length);
+            while (used.has(idx) && used.size < menuItems.length) {
+              idx = Math.floor(Math.random() * menuItems.length);
+            }
+            used.add(idx);
+            const mi = menuItems[idx];
+            const qty = 1 + Math.floor(Math.random() * 2);
+            const unitPrice = Number(mi.price);
+            orderTotal += unitPrice * qty;
+            await prisma.orderItem.create({
+              data: {
+                foodOrderId: order.id,
+                menuItemId: mi.id,
+                quantity: qty,
+                unitPrice,
+              },
+            });
+          }
+
+          // Invoice for this order
+          await prisma.invoice.create({
+            data: {
+              foodOrderId: order.id,
+              cashierId: cashier.id,
+              amount: orderTotal,
+              method: ["CASH", "CARD", "MOBILE"][Math.floor(Math.random() * 3)],
+              paidAt: createdAt,
+              type: "FOOD",
+            },
+          });
+        }
+      }
+      console.log("📊 Demo commercial data (orders + invoices) generated for charts");
+    }
   }
 
   console.log("✅ Seed completed successfully");
