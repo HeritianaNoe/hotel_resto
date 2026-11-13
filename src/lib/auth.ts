@@ -96,6 +96,7 @@ export function isStaff(userRoles: string[] | undefined) {
   return hasRole(
     userRoles,
     "ADMIN",
+    "DIRECTOR",
     "MANAGER",
     "RECEPTIONIST",
     "WAITER",

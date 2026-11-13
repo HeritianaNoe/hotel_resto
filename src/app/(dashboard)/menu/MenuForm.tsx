@@ -176,7 +176,7 @@ export function MenuForm({
                   onChange={(e) =>
                     setForm({ ...form, available: e.target.checked })
                   }
-                  className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                  className="h-4 w-4 rounded-sm border-slate-300 text-teal-600 focus:ring-teal-500"
                 />
                 <label htmlFor="available" className="text-sm text-slate-700">
                   Disponible

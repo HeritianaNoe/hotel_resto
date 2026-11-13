@@ -206,7 +206,7 @@ export default async function DashboardPage() {
             </span>
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm">
+        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-xs">
           <TrendingUp className="h-3.5 w-3.5 text-teal-600" />
           Tableau de bord en temps réel
         </div>

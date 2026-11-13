@@ -142,3 +142,12 @@ model Invoice {
 
   @@map("invoices")
 }
+
+/// Paramètres applicatifs (thème côté cookie ; matrice d'accès en JSON ici)
+model AppSetting {
+  key       String   @id @db.VarChar(64)
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}

@@ -14,7 +14,7 @@ export default async function UsersPage({
   searchParams: Promise<{ page?: string }>;
 }) {
   const session = await auth();
-  if (!session || !hasRole(session.user.roles, "ADMIN", "MANAGER")) {
+  if (!session || !hasRole(session.user.roles, "ADMIN", "DIRECTOR", "MANAGER")) {
     redirect("/dashboard");
   }
 
@@ -34,8 +34,8 @@ export default async function UsersPage({
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const roles = await prisma.role.findMany({ orderBy: { name: "asc" } });
-  const canCreate = hasRole(session.user.roles, "ADMIN");
-  const canEdit = hasRole(session.user.roles, "ADMIN");
+  const canCreate = hasRole(session.user.roles, "ADMIN", "DIRECTOR");
+  const canEdit = hasRole(session.user.roles, "ADMIN", "DIRECTOR");
 
   const pdfRows = users.map((u) => ({
     username: u.username,
@@ -111,7 +111,6 @@ export default async function UsersPage({
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50/80 text-slate-500">
               <tr>
-                <th className="px-5 py-3.5 font-semibold">Identifiant</th>
                 <th className="px-5 py-3.5 font-semibold">Nom</th>
                 <th className="px-5 py-3.5 font-semibold">Email</th>
                 <th className="px-5 py-3.5 font-semibold">Rôles</th>
@@ -123,7 +122,6 @@ export default async function UsersPage({
             <tbody className="divide-y divide-slate-100">
               {users.map((u) => (
                 <tr key={u.id.toString()} className="transition hover:bg-slate-50/80">
-                  <td className="px-5 py-3.5 font-semibold text-slate-900">{u.username}</td>
                   <td className="px-5 py-3.5 text-slate-600">{u.fullName || "—"}</td>
                   <td className="px-5 py-3.5 text-slate-500">{u.email}</td>
                   <td className="px-5 py-3.5">

@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --background: #f1f5f9;
@@ -12,6 +10,17 @@
   --border: #e2e8f0;
 }
 
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+/* Tailwind v4 : bordures par défaut = currentColor, boutons sans cursor pointer */
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button { border-color: var(--border); }
+  button:not(:disabled), [role="button"]:not(:disabled) { cursor: pointer; }
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
@@ -19,47 +28,93 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-@layer components {
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98];
-  }
-  .btn-primary {
-    @apply btn bg-teal-600 text-white shadow-sm shadow-teal-600/20 hover:bg-teal-700 hover:shadow-md focus:ring-teal-500;
-  }
-  .btn-secondary {
-    @apply btn bg-white text-slate-700 border border-slate-200 shadow-sm hover:bg-slate-50 hover:border-slate-300 focus:ring-slate-400;
-  }
-  .btn-danger {
-    @apply btn bg-red-600 text-white shadow-sm hover:bg-red-700 focus:ring-red-500;
-  }
-  .btn-ghost {
-    @apply btn bg-transparent text-slate-600 hover:bg-slate-100 focus:ring-slate-400;
-  }
-  .card {
-    @apply rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-shadow duration-200;
-  }
-  .card-hover {
-    @apply card hover:shadow-md hover:border-slate-300;
-  }
-  .input {
-    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10;
-  }
-  .label {
-    @apply mb-1.5 block text-sm font-medium text-slate-700;
-  }
-  .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide;
-  }
-  .page-title {
-    @apply text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl;
-  }
-  .page-subtitle {
-    @apply mt-1 text-sm text-slate-500;
-  }
-  .stat-card {
-    @apply relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
-  }
-  .table-container {
-    @apply overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm;
-  }
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-hidden focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98];
+}
+@utility btn-primary {
+  @apply btn bg-teal-600 text-white shadow-xs shadow-teal-600/20 hover:bg-teal-700 hover:shadow-md focus:ring-teal-500;
+}
+@utility btn-secondary {
+  @apply btn bg-white text-slate-700 border border-slate-200 shadow-xs hover:bg-slate-50 hover:border-slate-300 focus:ring-slate-400;
+}
+@utility btn-danger {
+  @apply btn bg-red-600 text-white shadow-xs hover:bg-red-700 focus:ring-red-500;
+}
+@utility btn-ghost {
+  @apply btn bg-transparent text-slate-600 hover:bg-slate-100 focus:ring-slate-400;
+}
+@utility card {
+  @apply rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-shadow duration-200;
+}
+@utility card-hover {
+  @apply card hover:shadow-md hover:border-slate-300;
+}
+@utility input {
+  @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-xs transition focus:border-teal-500 focus:outline-hidden focus:ring-4 focus:ring-teal-500/10;
+}
+@utility label {
+  @apply mb-1.5 block text-sm font-medium text-slate-700;
+}
+@utility badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide;
+}
+@utility page-title {
+  @apply text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl;
+}
+@utility page-subtitle {
+  @apply mt-1 text-sm text-slate-500;
+}
+@utility stat-card {
+  @apply relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+}
+@utility table-container {
+  @apply overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs;
+}
+
+
+/* ───────── Thèmes (Paramètres) ─────────
+   Redéfinit la palette teal utilisée partout : aucune classe à changer. */
+:root[data-theme="gray"] {
+  --primary: #374151;
+  --primary-dark: #1f2937;
+  --color-teal-50: #f9fafb;
+  --color-teal-100: #f3f4f6;
+  --color-teal-200: #e5e7eb;
+  --color-teal-300: #d1d5db;
+  --color-teal-400: #9ca3af;
+  --color-teal-500: #6b7280;
+  --color-teal-600: #4b5563;
+  --color-teal-700: #374151;
+  --color-teal-800: #1f2937;
+  --color-teal-900: #111827;
+}
+
+:root[data-theme="blue"] {
+  --primary: #1d4ed8;
+  --primary-dark: #1e3a8a;
+  --color-teal-50: #eff6ff;
+  --color-teal-100: #dbeafe;
+  --color-teal-200: #bfdbfe;
+  --color-teal-300: #93c5fd;
+  --color-teal-400: #60a5fa;
+  --color-teal-500: #3b82f6;
+  --color-teal-600: #2563eb;
+  --color-teal-700: #1d4ed8;
+  --color-teal-800: #1e40af;
+  --color-teal-900: #1e3a8a;
+}
+
+:root[data-theme="red"] {
+  --primary: #b91c1c;
+  --primary-dark: #7f1d1d;
+  --color-teal-50: #fef2f2;
+  --color-teal-100: #fee2e2;
+  --color-teal-200: #fecaca;
+  --color-teal-300: #fca5a5;
+  --color-teal-400: #f87171;
+  --color-teal-500: #ef4444;
+  --color-teal-600: #dc2626;
+  --color-teal-700: #b91c1c;
+  --color-teal-800: #991b1b;
+  --color-teal-900: #7f1d1d;
 }

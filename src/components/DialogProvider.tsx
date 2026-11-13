@@ -105,7 +105,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       {state.open && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-xs"
             onClick={() => close(false)}
           />
           <div

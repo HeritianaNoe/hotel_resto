@@ -114,7 +114,7 @@ export function UserForm({
       )}
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <h2 className="mb-5 text-lg font-semibold text-slate-900">
               {isEdit ? "Modifier l'utilisateur" : "Nouvel utilisateur"}
@@ -189,7 +189,7 @@ export function UserForm({
                     type="checkbox"
                     checked={form.enabled}
                     onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-                    className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                    className="h-4 w-4 rounded-sm border-slate-300 text-teal-600 focus:ring-teal-500"
                   />
                   Compte actif
                 </label>

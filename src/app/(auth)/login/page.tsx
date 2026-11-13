@@ -2,7 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useState, Suspense } from "react";
+import { FormEvent, useState, useEffect, Suspense } from "react";
 import { Building2, Lock, User, ArrowRight, Shield } from "lucide-react";
 
 function LoginForm() {
@@ -13,6 +13,24 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  /** Fafana ny formulaire (identifiant + password) rehefa miditra na mivoaka. */
+  function clearForm() {
+    setUsername("");
+    setPassword("");
+  }
+
+  useEffect(() => {
+    clearForm();
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) clearForm();
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      window.removeEventListener("pageshow", onPageShow);
+      clearForm();
+    };
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -29,6 +47,7 @@ function LoginForm() {
 
     if (res?.error) {
       setError("Identifiant ou mot de passe incorrect. Veuillez réessayer.");
+      setPassword("");
       return;
     }
 
@@ -47,7 +66,7 @@ function LoginForm() {
 
         <div className="relative">
           <div className="flex items-center gap-3 text-white">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">
               <Building2 className="h-6 w-6" />
             </div>
             <div>
@@ -68,19 +87,6 @@ function LoginForm() {
               Une plateforme unique pour gérer les chambres, réservations,
               commandes et facturation — conçue pour toute votre équipe.
             </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {["ADMIN", "MANAGER", "RÉCEPTION", "SERVEUR", "CHEF", "CAISSE", "CLIENT"].map(
-              (r) => (
-                <span
-                  key={r}
-                  className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur"
-                >
-                  {r}
-                </span>
-              )
-            )}
           </div>
         </div>
 
@@ -132,7 +138,7 @@ function LoginForm() {
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="admin"
                   required
-                  autoComplete="username"
+                  autoComplete="off"
                   autoFocus
                 />
               </div>
@@ -152,7 +158,7 @@ function LoginForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                 />
               </div>
             </div>
@@ -178,29 +184,6 @@ function LoginForm() {
               )}
             </button>
           </form>
-
-          {/* Demo accounts */}
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Comptes de démonstration
-            </p>
-            <p className="mt-1 text-sm text-slate-600">
-              Mot de passe :{" "}
-              <code className="rounded-md bg-slate-200/80 px-1.5 py-0.5 text-xs font-semibold text-slate-800">
-                password123
-              </code>
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-600">
-              <span>admin</span>
-              <span>manager1</span>
-              <span>reception1</span>
-              <span>waiter1</span>
-              <span>chef1</span>
-              <span>cashier1</span>
-              <span>stock1</span>
-              <span>guest1</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>

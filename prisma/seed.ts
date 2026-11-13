@@ -7,6 +7,7 @@ async function main() {
   // Roles
   const roles = [
     "ADMIN",
+    "DIRECTOR",
     "MANAGER",
     "RECEPTIONIST",
     "WAITER",
@@ -27,13 +28,14 @@ async function main() {
   const passwordHash = await bcrypt.hash("password123", 10);
 
   const usersData = [
-    { username: "admin", email: "admin@hotel.local", fullName: "Administrateur", role: "ADMIN" },
-    { username: "manager1", email: "manager1@hotel.local", fullName: "Rakoto Manager", role: "MANAGER" },
-    { username: "reception1", email: "reception1@hotel.local", fullName: "Rasoa Reception", role: "RECEPTIONIST" },
-    { username: "waiter1", email: "waiter1@hotel.local", fullName: "Randria Serveur", role: "WAITER" },
-    { username: "chef1", email: "chef1@hotel.local", fullName: "Rabe Chef", role: "CHEF" },
-    { username: "cashier1", email: "cashier1@hotel.local", fullName: "Hery Caissier", role: "CASHIER" },
-    { username: "guest1", email: "guest1@hotel.local", fullName: "Vahiny Iray", role: "GUEST" },
+    { username: "admin@hotel.mg", email: "admin@hotel.mg", fullName: "Administrateur", role: "ADMIN" },
+    { username: "directeur@hotel.mg", email: "directeur@hotel.mg", fullName: "Directeur Hôtel", role: "DIRECTOR" },
+    { username: "manager1@hotel.mg", email: "manager1@hotel.mg", fullName: "Rakoto Manager", role: "MANAGER" },
+    { username: "reception1@hotel.mg", email: "reception1@hotel.mg", fullName: "Rasoa Reception", role: "RECEPTIONIST" },
+    { username: "waiter1@hotel.mg", email: "waiter1@hotel.mg", fullName: "Randria Serveur", role: "WAITER" },
+    { username: "chef1@hotel.mg", email: "chef1@hotel.mg", fullName: "Rabe Chef", role: "CHEF" },
+    { username: "cashier1@hotel.mg", email: "cashier1@hotel.mg", fullName: "Hery Caissier", role: "CASHIER" },
+    { username: "guest1@hotel.mg", email: "guest1@hotel.mg", fullName: "Vahiny Iray", role: "GUEST" },
   ];
 
   for (const u of usersData) {

@@ -99,7 +99,7 @@ export function ReservationForm({
       )}
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <h2 className="mb-5 text-lg font-semibold text-slate-900">
               {isEdit ? "Modifier la réservation" : "Nouvelle réservation"}

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { TopNav } from "@/components/TopNav";
+import { getRoleAccessMap } from "@/lib/settings";
 
 export default async function DashboardLayout({
   children,
@@ -13,9 +14,11 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  const accessMap = await getRoleAccessMap();
+
   return (
     <div className="flex min-h-screen bg-slate-100">
-      <Sidebar />
+      <Sidebar accessMap={accessMap} />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopNav />
         <main className="flex-1 overflow-auto">

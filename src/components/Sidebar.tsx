@@ -17,8 +17,14 @@ import {
   Menu,
   X,
   ChevronRight,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  resourceForHref,
+  userCanAccess,
+  type ResourceKey,
+} from "@/lib/permissions";
 
 type NavItem = {
   href: string;
@@ -99,13 +105,33 @@ const navSections: NavSection[] = [
         href: "/users",
         label: "Utilisateurs",
         icon: Users,
-        roles: ["ADMIN", "MANAGER"],
+        roles: ["ADMIN", "MANAGER", "DIRECTOR"],
+      },
+    ],
+  },
+  {
+    title: "Système",
+    items: [
+      {
+        href: "/parametres",
+        label: "Paramètres",
+        icon: Settings,
+        roles: [
+          "ADMIN",
+          "DIRECTOR",
+          "MANAGER",
+          "RECEPTIONIST",
+          "WAITER",
+          "CHEF",
+          "CASHIER",
+          "GUEST",
+        ],
       },
     ],
   },
 ];
 
-export function Sidebar() {
+export function Sidebar({ accessMap }: { accessMap?: Record<string, boolean> }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const roles = session?.user?.roles || [];
@@ -131,9 +157,13 @@ export function Sidebar() {
   const visibleSections = navSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) =>
-        item.roles.some((r) => roles.includes(r))
-      ),
+      items: section.items.filter((item) => {
+        const byRole = item.roles.some((r) => roles.includes(r));
+        if (!byRole) return false;
+        const res = resourceForHref(item.href);
+        if (!res || !accessMap) return true;
+        return userCanAccess(roles, res as ResourceKey, accessMap);
+      }),
     }))
     .filter((section) => section.items.length > 0);
 
@@ -141,7 +171,7 @@ export function Sidebar() {
     <>
       {/* Brand */}
       <div className="flex h-16 items-center gap-3 border-b border-slate-200/80 px-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-700 shadow-sm shadow-teal-600/30">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-700 shadow-xs shadow-teal-600/30">
           <Building2 className="h-5 w-5 text-white" />
         </div>
         <div className="min-w-0">
@@ -170,7 +200,7 @@ export function Sidebar() {
                     className={cn(
                       "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                       active
-                        ? "bg-teal-50 text-teal-700 shadow-sm shadow-teal-100"
+                        ? "bg-teal-50 text-teal-700 shadow-xs shadow-teal-100"
                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                     )}
                   >
@@ -246,7 +276,7 @@ export function Sidebar() {
       {/* Mobile overlay */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
